@@ -1,0 +1,11 @@
+# Personal configuration — never commit this
+config.sh
+
+# The installed launchd plist (may contain your username / paths)
+com.*.cardflow.plist
+!com.example.cardflow.plist
+
+# Logs & runtime
+*.log
+*.err
+.DS_Store

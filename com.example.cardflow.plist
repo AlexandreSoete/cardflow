@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent that runs cardflow.sh whenever a volume is mounted.
+
+  1. Replace the REPLACE_ME path below with the absolute path to your copy
+     of cardflow.sh (StartOnMount fires on every mount; the script exits
+     immediately unless it's your configured card).
+  2. Rename this file to com.<yourname>.cardflow.plist
+  3. Copy it to ~/Library/LaunchAgents/ and load it:
+        cp com.<yourname>.cardflow.plist ~/Library/LaunchAgents/
+        launchctl load ~/Library/LaunchAgents/com.<yourname>.cardflow.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.example.cardflow</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>REPLACE_ME/cardflow.sh</string>
+    </array>
+
+    <key>StartOnMount</key>
+    <true/>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/cardflow.err</string>
+</dict>
+</plist>
