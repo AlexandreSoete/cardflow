@@ -5,9 +5,7 @@ sorted by date, verified byte-for-byte, then safely wiped and ejected. Built for
 macOS and a perfect companion to a self-hosted [Immich](https://immich.app)
 server.
 
-![Demo](docs/demo.gif)
-
-<!-- TODO: record a short screen capture and save it as docs/demo.gif -->
+![cardflow in action](docs/demo.gif)
 
 ---
 
