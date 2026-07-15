@@ -67,6 +67,23 @@ find_media() {
     find "$DCIM" -type f \( "${args[@]:1}" \) "$@"
 }
 
+# Resolve the Nth destination candidate for a filename, so we never overwrite a
+# different file that already occupies the base name:
+#   index 0 -> name.ext,  1 -> name-1.ext,  2 -> name-2.ext, ...
+candidate_path() {
+    local dir="$1" name="$2" i="$3"
+    if [ "$i" -eq 0 ]; then
+        printf '%s/%s' "$dir" "$name"
+        return
+    fi
+    local stem="$name" ext=""
+    if [[ "$name" == ?*.* ]]; then
+        stem="${name%.*}"
+        ext=".${name##*.}"
+    fi
+    printf '%s/%s-%s%s' "$dir" "$stem" "$i" "$ext"
+}
+
 speak() {
     [ "$SPEAK_ENABLED" = true ] || return 0
     # Lower the volume to SPEAK_VOLUME, speak, then restore the previous volume.
@@ -141,15 +158,26 @@ SKIPPED=0
 
 while IFS= read -r -d '' f; do
     day=$(stat -f "%Sm" -t "%Y-%m-%d" "$f")
-    mkdir -p "$DEST_DIR/$day" || fail "Cannot create $DEST_DIR/$day (disk full?) — card left intact."
-    dest="$DEST_DIR/$day/$(basename "$f")"
+    dir="$DEST_DIR/$day"
+    mkdir -p "$dir" || fail "Cannot create $dir (disk full?) — card left intact."
+    name=$(basename "$f")
 
-    if [ -f "$dest" ] && [ "$(stat -f %z "$f")" = "$(stat -f %z "$dest")" ]; then
-        SKIPPED=$((SKIPPED+1))
-    else
-        cp -p "$f" "$dest" || fail "Copy failed: $f — card left intact."
-        COPIED=$((COPIED+1))
-    fi
+    # Pick a destination: if a candidate already holds a byte-identical file it
+    # was already imported (skip); otherwise advance to the next name-N.ext slot
+    # so a name collision never overwrites a different file.
+    i=0
+    while :; do
+        dest=$(candidate_path "$dir" "$name" "$i")
+        if [ ! -e "$dest" ]; then
+            cp -p "$f" "$dest" || fail "Copy failed: $f — card left intact."
+            COPIED=$((COPIED+1))
+            break
+        elif cmp -s "$f" "$dest"; then
+            SKIPPED=$((SKIPPED+1))
+            break
+        fi
+        i=$((i+1))
+    done
 
     PCT=$(( (COPIED + SKIPPED) * 100 / TOTAL ))
     printf "\rCopy   : %3d%% (%d copied, %d skipped)" "$PCT" "$COPIED" "$SKIPPED"
@@ -167,9 +195,25 @@ MISMATCH=0
 
 while IFS= read -r -d '' f; do
     day=$(stat -f "%Sm" -t "%Y-%m-%d" "$f")
-    dest="$DEST_DIR/$day/$(basename "$f")"
+    dir="$DEST_DIR/$day"
+    name=$(basename "$f")
 
-    if [ -f "$dest" ] && cmp -s "$f" "$dest"; then
+    # Walk the same candidate sequence and match this card file to the copy
+    # that is byte-for-byte identical. Slots are filled contiguously, so the
+    # first missing candidate means there is no matching copy -> keep on card.
+    match=""
+    i=0
+    while :; do
+        dest=$(candidate_path "$dir" "$name" "$i")
+        [ -e "$dest" ] || break
+        if cmp -s "$f" "$dest"; then
+            match="$dest"
+            break
+        fi
+        i=$((i+1))
+    done
+
+    if [ -n "$match" ]; then
         VERIFIED=$((VERIFIED+1))
         if [ "$DELETE_AFTER_COPY" = true ]; then
             rm "$f" && DELETED=$((DELETED+1))

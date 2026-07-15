@@ -111,8 +111,13 @@ Here is exactly how the card is handled:
   photos are safely on disk regardless of whether Immich is running. Nothing is
   deleted based on Immich's state.
 
-Files already present at the destination with the same size are skipped during
-copy but still verified before any deletion, so re-running is safe.
+- **Name collisions never overwrite.** If a different file already occupies a
+  destination name, the new one is saved as `name-1.ext`, `name-2.ext`, and so
+  on. Verification then matches each card file to its own copy by content, so
+  the right file is checked before deletion.
+
+Files already imported (byte-for-byte identical at the destination) are skipped
+during copy but still verified before any deletion, so re-running is safe.
 
 ## Uninstall
 
